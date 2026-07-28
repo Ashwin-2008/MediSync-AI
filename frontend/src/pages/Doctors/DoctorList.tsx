@@ -1,24 +1,24 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search, Filter, Plus, Loader2 } from 'lucide-react';
+import { Search, Loader2, UserRound, Filter } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '../../components/ui/Card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/Table';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { PatientService } from '../../services/api';
+import { DoctorService } from '../../services/api';
 
-export default function PatientList() {
-  const { data: patients, isLoading, isError } = useQuery({
-    queryKey: ['patients'],
-    queryFn: PatientService.getAll
+export default function DoctorList() {
+  const { data: doctors, isLoading, isError } = useQuery({
+    queryKey: ['doctors'],
+    queryFn: DoctorService.getAll
   });
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold tracking-tight">Patient Directory</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Doctor Directory</h1>
         <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
-          <Plus className="mr-2 h-4 w-4" /> Register Patient
+          <UserRound className="mr-2 h-4 w-4" /> Add Doctor
         </Button>
       </div>
 
@@ -27,7 +27,7 @@ export default function PatientList() {
           <div className="flex flex-col sm:flex-row items-center gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input type="text" placeholder="Search patients by name, ID, or phone..." className="pl-9" />
+              <Input type="text" placeholder="Search doctors by name or specialty..." className="pl-9" />
             </div>
             <Button variant="outline" className="w-full sm:w-auto">
               <Filter className="mr-2 h-4 w-4" /> Filters
@@ -39,10 +39,10 @@ export default function PatientList() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Patient ID</TableHead>
+                  <TableHead>Doctor ID</TableHead>
                   <TableHead>Name</TableHead>
+                  <TableHead>Specialty</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Department</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -56,26 +56,26 @@ export default function PatientList() {
                 ) : isError ? (
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center text-destructive">
-                      Failed to load patients.
+                      Failed to load doctors.
                     </TableCell>
                   </TableRow>
-                ) : patients?.length === 0 ? (
+                ) : doctors?.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                      No patients found.
+                      No doctors found.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  patients?.map((patient: any) => (
-                    <TableRow key={patient.id}>
-                      <TableCell className="font-mono text-xs text-primary">{patient.id}</TableCell>
-                      <TableCell className="font-medium">{patient.name}</TableCell>
+                  doctors?.map((doc: any) => (
+                    <TableRow key={doc.id}>
+                      <TableCell className="font-mono text-xs text-primary">{doc.id}</TableCell>
+                      <TableCell className="font-medium">{doc.name}</TableCell>
+                      <TableCell>{doc.specialty}</TableCell>
                       <TableCell>
                         <span className="inline-flex items-center rounded-full bg-secondary px-2.5 py-0.5 text-xs font-semibold text-secondary-foreground">
-                          {patient.status}
+                          {doc.status}
                         </span>
                       </TableCell>
-                      <TableCell>{patient.department}</TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80">View Profile</Button>
                       </TableCell>
@@ -84,14 +84,6 @@ export default function PatientList() {
                 )}
               </TableBody>
             </Table>
-          </div>
-          
-          <div className="flex items-center justify-between mt-4 px-2 text-sm text-muted-foreground">
-            <div>Showing {patients?.length || 0} patients</div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" disabled>Previous</Button>
-              <Button variant="outline" size="sm" disabled={!patients || patients.length === 0}>Next</Button>
-            </div>
           </div>
         </CardContent>
       </Card>

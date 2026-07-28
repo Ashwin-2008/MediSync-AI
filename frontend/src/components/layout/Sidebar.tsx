@@ -42,9 +42,9 @@ export function Sidebar() {
   );
 
   return (
-    <div className="flex h-screen w-64 flex-col bg-slate-950 border-r border-slate-800 text-slate-300">
-      <div className="flex h-16 items-center px-6 font-bold text-white tracking-tight border-b border-slate-800">
-        <span className="text-blue-500 mr-2">✦</span> NovaHealth AI
+    <div className="flex h-screen w-64 flex-col bg-card border-r border-border text-muted-foreground">
+      <div className="flex h-16 items-center px-6 font-bold text-foreground tracking-tight border-b border-border">
+        <span className="text-primary mr-2">✦</span> NovaHealth AI
       </div>
       
       <div className="flex-1 overflow-y-auto py-4">
@@ -59,8 +59,8 @@ export function Sidebar() {
                   cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
                     isActive 
-                      ? "bg-blue-600 text-white shadow-md shadow-blue-900/20" 
-                      : "hover:bg-slate-900 hover:text-white"
+                      ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" 
+                      : "hover:bg-secondary hover:text-secondary-foreground"
                   )
                 }
               >
@@ -72,7 +72,7 @@ export function Sidebar() {
         </nav>
       </div>
       
-      <div className="p-4 border-t border-slate-800 text-xs text-slate-500">
+      <div className="p-4 border-t border-border text-xs text-muted-foreground/60">
         v2.4.0-enterprise
       </div>
     </div>
