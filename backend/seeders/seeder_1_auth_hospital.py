@@ -38,26 +38,34 @@ async def seed_auth_hospital(db, config, batch_size):
     users = []
     
     # Admins
-    for _ in range(config["admins"]):
+    for i in range(config["admins"]):
+        email = "admin@hospital.com" if i == 0 else fake.email()
+        username = "admin" if i == 0 else fake.user_name()
+        first_name = "Admin" if i == 0 else fake.first_name()
+        last_name = "User" if i == 0 else fake.last_name()
         users.append({
             "id": generate_uuid(),
-            "email": fake.email(),
-            "username": fake.user_name(),
+            "email": email,
+            "username": username,
             "hashed_password": hashed_password,
-            "first_name": fake.first_name(),
-            "last_name": fake.last_name(),
+            "first_name": first_name,
+            "last_name": last_name,
             "role_id": context["roles"]["Admin"]
         })
         
     # Receptionists
-    for _ in range(config["receptionists"]):
+    for i in range(config["receptionists"]):
+        email = "receptionist@hospital.com" if i == 0 else fake.email()
+        username = "receptionist" if i == 0 else fake.user_name()
+        first_name = "Receptionist" if i == 0 else fake.first_name()
+        last_name = "User" if i == 0 else fake.last_name()
         users.append({
             "id": generate_uuid(),
-            "email": fake.email(),
-            "username": fake.user_name(),
+            "email": email,
+            "username": username,
             "hashed_password": hashed_password,
-            "first_name": fake.first_name(),
-            "last_name": fake.last_name(),
+            "first_name": first_name,
+            "last_name": last_name,
             "role_id": context["roles"]["Receptionist"]
         })
         

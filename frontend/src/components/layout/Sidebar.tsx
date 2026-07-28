@@ -25,6 +25,7 @@ export function Sidebar() {
     { name: 'Dashboard', to: '/', icon: LayoutDashboard, roles: ['Admin', 'Doctor', 'Nurse', 'Receptionist'] },
     { name: 'Patients', to: '/patients', icon: Users, roles: ['Admin', 'Doctor', 'Nurse', 'Receptionist'] },
     { name: 'Doctors', to: '/doctors', icon: UserRound, roles: ['Admin', 'Receptionist'] },
+    { name: 'Treatments', to: '/treatments', icon: TestTube2, roles: ['Admin', 'Doctor', 'Nurse'] },
     { name: 'Appointments', to: '/appointments', icon: CalendarDays, roles: ['Admin', 'Doctor', 'Receptionist'] },
     { name: 'AI Diagnosis', to: '/ai-diagnosis', icon: BrainCircuit, roles: ['Admin', 'Doctor'] },
     { name: 'Lab Reports', to: '/labs', icon: TestTube2, roles: ['Admin', 'Doctor', 'Nurse'] },
