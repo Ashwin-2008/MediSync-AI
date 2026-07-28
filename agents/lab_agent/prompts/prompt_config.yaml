@@ -1,0 +1,4 @@
+name: lab_agent
+version: v1
+model: gemini-flash
+temperature: 0.1

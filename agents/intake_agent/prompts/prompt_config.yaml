@@ -1,0 +1,4 @@
+name: intake_agent
+version: v1
+model: gemini-pro
+temperature: 0.1

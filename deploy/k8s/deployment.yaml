@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hospital-ai-backend
+  labels:
+    app: hospital-ai
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: hospital-ai
+  template:
+    metadata:
+      labels:
+        app: hospital-ai
+    spec:
+      containers:
+      - name: backend
+        image: myregistry.com/hospital-ai-backend:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: hospital-secrets
+              key: database-url
+        - name: REDIS_URL
+          value: "redis://redis-service:6379/0"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hospital-ai-service
+spec:
+  selector:
+    app: hospital-ai
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000
+  type: ClusterIP

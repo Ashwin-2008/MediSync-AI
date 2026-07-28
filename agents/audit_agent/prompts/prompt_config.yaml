@@ -1,0 +1,4 @@
+name: audit_agent
+version: v1
+model: gemini-flash
+temperature: 0.1
