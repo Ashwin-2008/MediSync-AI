@@ -1,9 +1,15 @@
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Users, Activity, Clock, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/Table';
+import { PatientService } from '../../services/api';
 
 export default function HospitalDashboard() {
+  const { data: patients, isLoading } = useQuery({
+    queryKey: ['patients'],
+    queryFn: PatientService.getAll
+  });
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -71,25 +77,18 @@ export default function HospitalDashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {/* Mock data */}
-                <TableRow>
-                  <TableCell className="font-medium text-primary">PT-10492</TableCell>
-                  <TableCell>Sarah Jenkins</TableCell>
-                  <TableCell><span className="inline-flex items-center rounded-full bg-accent/20 px-2.5 py-0.5 text-xs font-semibold text-accent">Triage Complete</span></TableCell>
-                  <TableCell>Cardiology</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="font-medium text-primary">PT-10493</TableCell>
-                  <TableCell>Michael Chen</TableCell>
-                  <TableCell><span className="inline-flex items-center rounded-full bg-warning/20 px-2.5 py-0.5 text-xs font-semibold text-warning">Pending Lab</span></TableCell>
-                  <TableCell>Emergency</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="font-medium text-primary">PT-10494</TableCell>
-                  <TableCell>Emily Rodriguez</TableCell>
-                  <TableCell><span className="inline-flex items-center rounded-full bg-primary/20 px-2.5 py-0.5 text-xs font-semibold text-primary">Consultation</span></TableCell>
-                  <TableCell>Pediatrics</TableCell>
-                </TableRow>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center h-24">Loading...</TableCell>
+                  </TableRow>
+                ) : patients?.items?.slice(0, 5).map((patient: any) => (
+                  <TableRow key={patient.id}>
+                    <TableCell className="font-medium text-primary">{patient.id.substring(0, 8)}</TableCell>
+                    <TableCell>{`${patient.first_name} ${patient.last_name}`}</TableCell>
+                    <TableCell><span className="inline-flex items-center rounded-full bg-accent/20 px-2.5 py-0.5 text-xs font-semibold text-accent">Registered</span></TableCell>
+                    <TableCell>General</TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </CardContent>

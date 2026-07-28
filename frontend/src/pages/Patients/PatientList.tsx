@@ -59,23 +59,23 @@ export default function PatientList() {
                       Failed to load patients.
                     </TableCell>
                   </TableRow>
-                ) : patients?.length === 0 ? (
+                ) : patients?.items?.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                       No patients found.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  patients?.map((patient: any) => (
+                  patients?.items?.map((patient: any) => (
                     <TableRow key={patient.id}>
-                      <TableCell className="font-mono text-xs text-primary">{patient.id}</TableCell>
-                      <TableCell className="font-medium">{patient.name}</TableCell>
+                      <TableCell className="font-mono text-xs text-primary">{patient.id.substring(0, 8)}</TableCell>
+                      <TableCell className="font-medium">{`${patient.first_name} ${patient.last_name}`}</TableCell>
                       <TableCell>
                         <span className="inline-flex items-center rounded-full bg-secondary px-2.5 py-0.5 text-xs font-semibold text-secondary-foreground">
-                          {patient.status}
+                          Registered
                         </span>
                       </TableCell>
-                      <TableCell>{patient.department}</TableCell>
+                      <TableCell>General</TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80">View Profile</Button>
                       </TableCell>
@@ -87,10 +87,10 @@ export default function PatientList() {
           </div>
           
           <div className="flex items-center justify-between mt-4 px-2 text-sm text-muted-foreground">
-            <div>Showing {patients?.length || 0} patients</div>
+            <div>Showing {patients?.items?.length || 0} of {patients?.total || 0} patients</div>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" disabled>Previous</Button>
-              <Button variant="outline" size="sm" disabled={!patients || patients.length === 0}>Next</Button>
+              <Button variant="outline" size="sm" disabled={!patients || patients.page === 1}>Previous</Button>
+              <Button variant="outline" size="sm" disabled={!patients || patients.items.length < patients.size}>Next</Button>
             </div>
           </div>
         </CardContent>

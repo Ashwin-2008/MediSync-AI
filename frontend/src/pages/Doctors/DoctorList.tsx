@@ -59,21 +59,21 @@ export default function DoctorList() {
                       Failed to load doctors.
                     </TableCell>
                   </TableRow>
-                ) : doctors?.length === 0 ? (
+                ) : doctors?.items?.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                       No doctors found.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  doctors?.map((doc: any) => (
+                  doctors?.items?.map((doc: any) => (
                     <TableRow key={doc.id}>
-                      <TableCell className="font-mono text-xs text-primary">{doc.id}</TableCell>
-                      <TableCell className="font-medium">{doc.name}</TableCell>
-                      <TableCell>{doc.specialty}</TableCell>
+                      <TableCell className="font-mono text-xs text-primary">{doc.id.substring(0, 8)}</TableCell>
+                      <TableCell className="font-medium">{doc.user?.full_name || 'Dr. ' + (doc.specialization || 'Unknown')}</TableCell>
+                      <TableCell>{doc.specialization}</TableCell>
                       <TableCell>
                         <span className="inline-flex items-center rounded-full bg-secondary px-2.5 py-0.5 text-xs font-semibold text-secondary-foreground">
-                          {doc.status}
+                          Active
                         </span>
                       </TableCell>
                       <TableCell className="text-right">

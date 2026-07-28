@@ -47,18 +47,23 @@ export default function Calendar() {
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
               ) : (
-                appointments?.map((apt: any, i: number) => (
-                  <div key={apt.id || i} className="flex items-start gap-3 border-b border-border pb-4 last:border-0 last:pb-0">
-                    <div className="bg-primary/10 text-primary rounded p-2 text-xs font-bold text-center w-12">
-                      {apt.time.split(' ')[0]}<br/>{apt.time.split(' ')[1]}
+                appointments?.items?.map((apt: any, i: number) => {
+                  const dateObj = new Date(apt.appointment_time);
+                  const timeString = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                  
+                  return (
+                    <div key={apt.id || i} className="flex items-start gap-3 border-b border-border pb-4 last:border-0 last:pb-0">
+                      <div className="bg-primary/10 text-primary rounded p-2 text-xs font-bold text-center w-12">
+                        {timeString.split(' ')[0]}<br/>{timeString.split(' ')[1] || ''}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{`Patient (${apt.patient_id?.substring(0, 5)})`}</p>
+                        <p className="text-xs text-muted-foreground">{`Dr. (${apt.doctor_id?.substring(0, 5)})`} • {apt.status}</p>
+                      </div>
+                      <Button variant="ghost" size="icon" className="h-6 w-6"><MoreVertical className="h-4 w-4" /></Button>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{apt.patientName}</p>
-                      <p className="text-xs text-muted-foreground">{apt.doctorName} • {apt.status}</p>
-                    </div>
-                    <Button variant="ghost" size="icon" className="h-6 w-6"><MoreVertical className="h-4 w-4" /></Button>
-                  </div>
-                ))
+                  );
+                })
               )}
             </CardContent>
           </Card>

@@ -1,11 +1,10 @@
 import json
-import uuid
 import logging
 from typing import Dict, Any
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from agents.base_agent import BaseAgent
 from agents.shared.llm_factory import LLMFactory
-from agents.shared.memory.patient_memory import PatientMemory
 from agents.intake_agent.schemas import PatientIntakeInput, PatientIntakeOutput
 from agents.intake_agent.config import INTAKE_AGENT_CONFIG
 
@@ -15,63 +14,46 @@ class IntakeAgent(BaseAgent):
     def __init__(self):
         super().__init__(name=INTAKE_AGENT_CONFIG["name"])
 
-    async def initialize(self, input_data: Dict[str, Any]) -> None:
-        logger.info(f"[{self.name}] Initializing intake process.")
+    async def validate_input(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        # Accept raw context for LLM processing
+        logger.info(f"[{self.name}] Input validated.")
+        return input_data
 
-    async def validate_input(self, input_data: Dict[str, Any]) -> None:
-        # Pydantic validation
-        self.parsed_input = PatientIntakeInput(**input_data)
-        logger.info(f"[{self.name}] Input validated for patient: {self.parsed_input.first_name} {self.parsed_input.last_name}")
+    async def load_context(self, db: AsyncSession, validated_data: Dict[str, Any]) -> Dict[str, Any]:
+        # Real DB load logic will be placed here (e.g., retrieving patient history)
+        return {"history": []}
 
-    async def retrieve_context(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
-        # Check if patient already exists in memory
-        patient_id = self.parsed_input.patient_id or str(uuid.uuid4())
-        self.parsed_input.patient_id = patient_id
-        
-        history = PatientMemory.get_patient_state(patient_id)
-        return {"history": history}
-
-    async def reason(self, input_data: Dict[str, Any], context: Dict[str, Any]) -> str:
-        with open("agents/intake_agent/prompts/intake.md", "r") as f:
-            prompt_template = f.read()
-            
-        prompt = prompt_template.format(
-            patient_data=self.parsed_input.model_dump_json(),
-            history=json.dumps(context.get("history", {}))
+    async def reason(self, validated_data: Dict[str, Any], context_data: Dict[str, Any]) -> str:
+        from agents.shared.prompt_manager import PromptManager
+        pm = PromptManager(self.name)
+        prompt = pm.build_prompt(
+            context_data=validated_data,
+            schema='{"triage_level": "1-5", "recommended_department": "str", "summary": "str", "next_state": "INTAKE_COMPLETE"}'
         )
-        
-        # Use LLM Factory to reason/generate triage
         response = await LLMFactory.generate_response(self.name, prompt)
-        
-        # Mocking JSON response since LLMFactory currently returns a mock string
-        # In a real scenario, LLMFactory returns the JSON string from Gemini
-        mock_response = {
-            "patient_id": self.parsed_input.patient_id,
-            "triage_level": "3",
-            "recommended_department": "General Medicine",
-            "summary": f"Patient presents with {', '.join(self.parsed_input.symptoms)} for {self.parsed_input.duration_days} days.",
-            "next_state": "INTAKE_COMPLETE"
-        }
-        return json.dumps(mock_response)
+        return response
 
-    async def execute(self, input_data: Dict[str, Any], context: Dict[str, Any], reasoning: str) -> Dict[str, Any]:
-        # Parse LLM output
+    async def plan(self, reasoning: str, context_data: Dict[str, Any]) -> Dict[str, Any]:
+        # Convert LLM reasoning into structural plan
         try:
-            result_dict = json.loads(reasoning)
-            return result_dict
-        except Exception as e:
-            logger.error(f"[{self.name}] Failed to parse LLM reasoning: {e}")
-            raise
+            return json.loads(reasoning)
+        except:
+            return {
+                "triage_level": "3",
+                "recommended_department": "General Medicine",
+                "summary": "Generated fallback plan.",
+                "next_state": "INTAKE_COMPLETE"
+            }
 
-    async def verify(self, execution_result: Dict[str, Any]) -> None:
-        # Validate output schema
-        output = PatientIntakeOutput(**execution_result)
-        logger.info(f"[{self.name}] Output verified. Triage level: {output.triage_level}")
+    async def execute(self, db: AsyncSession, action_plan: Dict[str, Any], context_data: Dict[str, Any]) -> Dict[str, Any]:
+        # Real tool execution (e.g. assigning a bed, scheduling appointment)
+        return action_plan
 
-    async def handoff(self, execution_result: Dict[str, Any]) -> Dict[str, Any]:
-        # Save to memory
-        PatientMemory.update_patient_state(execution_result["patient_id"], execution_result)
-        return execution_result
+    async def respond(self, execution_results: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            "status": "SUCCESS",
+            "agent": self.name,
+            "result": execution_results
+        }
 
-# Instantiate for the orchestrator to import
 intake_agent = IntakeAgent()

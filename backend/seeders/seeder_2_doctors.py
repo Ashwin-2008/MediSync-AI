@@ -14,17 +14,21 @@ async def seed_doctors(db, config, context, batch_size):
     users = []
     doctor_ids = []
     
-    for _ in range(config["doctors"]):
+    for i in range(config["doctors"]):
         user_id = generate_uuid()
         doctor_id = generate_uuid()
+        email = "doctor@hospital.com" if i == 0 else fake.email()
+        username = "doctor" if i == 0 else fake.user_name()
+        first_name = "Doctor" if i == 0 else fake.first_name()
+        last_name = "User" if i == 0 else fake.last_name()
         
         users.append({
             "id": user_id,
-            "email": fake.email(),
-            "username": fake.user_name(),
+            "email": email,
+            "username": username,
             "hashed_password": hashed_password,
-            "first_name": fake.first_name(),
-            "last_name": fake.last_name(),
+            "first_name": first_name,
+            "last_name": last_name,
             "role_id": context["roles"]["Doctor"]
         })
         

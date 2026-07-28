@@ -36,14 +36,16 @@ class APIManager:
 
     def load_keys(self):
         # Load up to 4 keys per provider from environment variables
+        from dotenv import load_dotenv
+        load_dotenv()
         for i in range(1, 5):
             gemini_key = os.getenv(f"GEMINI_KEY_{i}")
-            if gemini_key:
+            if gemini_key and gemini_key.strip():
                 self.keys[Provider.GEMINI].append(APIKey(gemini_key, Provider.GEMINI))
             
-            groq_key = os.getenv(f"GROQ_KEY_{i}")
-            if groq_key:
-                self.keys[Provider.GROQ].append(APIKey(groq_key, Provider.GROQ))
+        or_key = os.getenv("OPENROUTER_KEY")
+        if or_key and or_key.strip():
+            self.keys[Provider.GROQ].append(APIKey(or_key, Provider.GROQ))
 
     def _get_best_key(self, provider: Provider) -> Optional[APIKey]:
         available_keys = [k for k in self.keys[provider] if not k.is_in_cooldown]
@@ -58,22 +60,13 @@ class APIManager:
         return best_key
 
     def get_key(self, provider: Provider) -> Optional[str]:
-        """Gets the best available key for the provider, falling back to the other provider if needed."""
+        """Gets the best available key for the provider."""
         key_obj = self._get_best_key(provider)
         
         if key_obj:
             return key_obj.key
             
-        # Fallback to the other provider if all keys are exhausted
-        logger.warning(f"All keys for {provider.value} are exhausted or in cooldown. Attempting fallback.")
-        fallback_provider = Provider.GROQ if provider == Provider.GEMINI else Provider.GEMINI
-        fallback_key_obj = self._get_best_key(fallback_provider)
-        
-        if fallback_key_obj:
-            logger.info(f"Successfully fell back to {fallback_provider.value}")
-            return fallback_key_obj.key
-            
-        logger.error("All keys for both providers are exhausted or in cooldown.")
+        logger.warning(f"All keys for {provider.value} are exhausted or in cooldown.")
         return None
 
     def report_error(self, key_str: str, status_code: int):

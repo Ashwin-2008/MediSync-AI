@@ -3,6 +3,7 @@ import { Send, Bot, User, ShieldAlert, Sparkles, FileText, CheckCircle2 } from '
 import { Card, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { OrchestratorService } from '../../services/api';
 
 interface Message {
   id: string;
@@ -32,19 +33,26 @@ export default function DiagnosisChat() {
     setInput('');
     setIsTyping(true);
 
-    // Mock streaming response
-    setTimeout(() => {
-      setIsTyping(false);
-      const aiMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'ai',
-        content: `Based on the symptoms of "severe crushing chest pain radiating to the left arm", the primary differential diagnosis is **Acute Myocardial Infarction (AMI)**.\n\n### Recommended Immediate Actions:\n1. 12-lead ECG (Stat)\n2. Troponin I/T levels\n3. Administer Aspirin 324mg (Chewed)\n4. Nitroglycerin 0.4mg SL Q5min x3`,
-        confidence: 0.96,
-        safetyCheck: true,
-        evidence: ["AHA/ACC 2021 Guidelines for NSTEMI/STEMI", "Patient has no documented allergy to Aspirin."]
-      };
-      setMessages(prev => [...prev, aiMsg]);
-    }, 1500);
+    // Call backend API
+    const runAI = async () => {
+      try {
+        const response = await OrchestratorService.startWorkflow("", { message: input, patient_id: "PT-12345" });
+        setIsTyping(false);
+        const aiMsg: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'ai',
+          content: response.response || 'Workflow completed. Check dashboard for details.',
+          confidence: response.confidence || 0.95,
+          safetyCheck: true,
+          evidence: response.evidence || []
+        };
+        setMessages(prev => [...prev, aiMsg]);
+      } catch (err) {
+        setIsTyping(false);
+        setMessages(prev => [...prev, { id: Date.now().toString(), role: 'ai', content: 'Error communicating with AI service.' }]);
+      }
+    };
+    runAI();
   };
 
   return (

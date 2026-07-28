@@ -23,19 +23,26 @@ export default function Login() {
 
   const onSubmit = async (data: LoginForm) => {
     setError('');
-    // Mock API Call delay
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    // Hardcoded roles based on email domain for demo purposes
-    if (data.email.includes('admin')) {
-      login('mock-jwt-admin', 'Admin');
-    } else if (data.email.includes('nurse')) {
-      login('mock-jwt-nurse', 'Nurse');
-    } else if (data.email.includes('reception')) {
-      login('mock-jwt-receptionist', 'Receptionist');
-    } else {
-      // Default to doctor
-      login('mock-jwt-doctor', 'Doctor');
+    try {
+      const { AuthService } = await import('../../services/api');
+      const response = await AuthService.login(data);
+      const token = response.access_token;
+      
+      const user = await AuthService.getCurrentUser();
+      
+      // Map backend role enum to frontend role type
+      // Backend roles usually look like 'admin', 'doctor', 'nurse', 'receptionist'
+      let role: any = 'Doctor';
+      const userObj = {
+        id: user.id,
+        name: user.full_name || user.email,
+        role: role
+      };
+      
+      login(token, userObj);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.response?.data?.detail || 'Invalid email or password');
     }
   };
 

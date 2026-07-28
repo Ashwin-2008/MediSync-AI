@@ -10,7 +10,7 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (token: string, role: Role) => void;
+  login: (token: string, userObj: User) => void;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -32,11 +32,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const login = (token: string, role: Role) => {
+  const login = (token: string, userObj: User) => {
     localStorage.setItem('token', token);
-    const loggedInUser: User = { id: 'u-123', name: 'Dr. Sarah Smith', role };
-    localStorage.setItem('user', JSON.stringify(loggedInUser));
-    setUser(loggedInUser);
+    localStorage.setItem('user', JSON.stringify(userObj));
+    setUser(userObj);
   };
 
   const logout = () => {
