@@ -1,46 +1,71 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import Lightfall from '../../components/react-bits/Lightfall';
 
-// Temporary simplistic validation since it's client-side mocked
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
-  password: z.string().min(4, "Password must be at least 4 characters"),
+  password: z.string().min(1, "Password is required"),
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
 
 export default function Login() {
   const { login } = useAuth();
+  const navigate = useNavigate();
   const [error, setError] = useState('');
-  
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginForm>();
+
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginForm>({
+    resolver: zodResolver(loginSchema)
+  });
 
   const onSubmit = async (data: LoginForm) => {
     setError('');
     try {
       const { AuthService } = await import('../../services/api');
+
+      // Step 1: authenticate and get the token
       const response = await AuthService.login(data);
       const token = response.access_token;
-      
+
+      // Step 2: store the token in localStorage BEFORE calling /me
+      // The Axios request interceptor reads from localStorage, so this must
+      // happen before any subsequent authenticated request fires.
+      localStorage.setItem('token', token);
+
+      // Step 3: now fetch the current user — the interceptor will attach the token
       const user = await AuthService.getCurrentUser();
-      
-      // Map backend role enum to frontend role type
-      // Backend roles usually look like 'admin', 'doctor', 'nurse', 'receptionist'
+
+      // Step 4: map backend role to frontend Role type
       let role: any = 'Doctor';
+      if (user.role && typeof user.role === 'object' && user.role.name) {
+        const roleName = user.role.name.toLowerCase();
+        role = roleName.charAt(0).toUpperCase() + roleName.slice(1);
+      } else if (typeof user.role === 'string') {
+        const roleName = user.role.toLowerCase();
+        role = roleName.charAt(0).toUpperCase() + roleName.slice(1);
+      }
+
       const userObj = {
         id: user.id,
-        name: user.full_name || user.email,
-        role: role
+        name: user.full_name || user.first_name || user.email,
+        role,
       };
-      
+
+      // Step 5: commit to AuthContext (also persists user to localStorage)
       login(token, userObj);
+
+      // Step 6: explicit navigation — do not rely on re-render timing
+      navigate('/', { replace: true });
     } catch (err: any) {
+      // Clean up the token if anything after login() failed
+      localStorage.removeItem('token');
       console.error(err);
       setError(err.response?.data?.detail || 'Invalid email or password');
     }
@@ -51,8 +76,8 @@ export default function Login() {
       {/* React Bits Lightfall Background */}
       <div className="absolute inset-0 z-0">
         <Lightfall
-          colors={['#2563EB', '#10B981', '#3B82F6']} // Using enterprise hospital theme colors
-          backgroundColor="#020617" // Deep slate background
+          colors={['#2563EB', '#10B981', '#3B82F6']}
+          backgroundColor="#020617"
           speed={0.7}
           streakCount={8}
           streakWidth={1.5}
@@ -92,7 +117,7 @@ export default function Login() {
                 />
                 {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
               </div>
-              
+
               <div className="space-y-2">
                 <Input
                   {...register('password')}
@@ -109,13 +134,17 @@ export default function Login() {
                 </div>
               )}
 
-              <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting}>
+              <Button
+                type="submit"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                disabled={isSubmitting}
+              >
                 {isSubmitting ? 'Authenticating...' : 'Sign In'}
               </Button>
             </form>
 
             <div className="mt-6 text-center text-xs text-muted-foreground">
-              <p>Demo accounts: admin@, doctor@, nurse@, reception@</p>
+              <p>Demo accounts: admin@hospital.com / password123</p>
             </div>
           </CardContent>
         </Card>

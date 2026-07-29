@@ -1,6 +1,6 @@
 import uuid
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from pydantic import Field
 from .base import BaseSchema, UUIDSchema, PaginationSchema
 
@@ -8,7 +8,7 @@ from .base import BaseSchema, UUIDSchema, PaginationSchema
 class PaymentBase(BaseSchema):
     amount: float
     payment_method: str
-    payment_date: datetime = Field(default_factory=datetime.utcnow)
+    payment_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     transaction_id: Optional[str] = None
 
 class PaymentCreate(PaymentBase):
@@ -22,7 +22,7 @@ class InsuranceClaimBase(BaseSchema):
     claim_amount: float
     approved_amount: Optional[float] = None
     status: str = "SUBMITTED"
-    submission_date: datetime = Field(default_factory=datetime.utcnow)
+    submission_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class InsuranceClaimCreate(InsuranceClaimBase):
     invoice_id: uuid.UUID

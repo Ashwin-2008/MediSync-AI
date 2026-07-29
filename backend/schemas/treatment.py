@@ -1,6 +1,6 @@
 import uuid
 from typing import List, Optional, Dict, Any
-from datetime import datetime, date
+from datetime import datetime, timezone, date
 from pydantic import Field
 from .base import BaseSchema, UUIDSchema, PaginationSchema
 
@@ -125,7 +125,7 @@ class LabResultResponse(LabResultBase, UUIDSchema):
 
 # Lab Report
 class LabReportBase(BaseSchema):
-    report_date: datetime = Field(default_factory=datetime.utcnow)
+    report_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     summary: str
 
 class LabReportCreate(LabReportBase):
@@ -144,7 +144,7 @@ class LabOrderBase(BaseSchema):
     test_name: str
     priority: str
     status: str = "PENDING"
-    order_date: datetime = Field(default_factory=datetime.utcnow)
+    order_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class LabOrderCreate(LabOrderBase):
     patient_id: uuid.UUID
@@ -168,7 +168,7 @@ class RadiologyReportBase(BaseSchema):
     scan_type: str
     report_text: str
     image_urls: Optional[Dict[str, Any]] = None
-    date_performed: datetime = Field(default_factory=datetime.utcnow)
+    date_performed: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class RadiologyReportCreate(RadiologyReportBase):
     patient_id: uuid.UUID
@@ -182,7 +182,7 @@ class RadiologyReportResponse(RadiologyReportBase, UUIDSchema):
 class MedicalDocumentBase(BaseSchema):
     document_type: str
     file_url: str
-    uploaded_at: datetime = Field(default_factory=datetime.utcnow)
+    uploaded_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class MedicalDocumentCreate(MedicalDocumentBase):
     patient_id: uuid.UUID

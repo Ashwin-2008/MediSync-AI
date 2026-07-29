@@ -1,36 +1,53 @@
-import os
+import ssl
 from typing import AsyncGenerator
+from urllib.parse import urlparse, urlencode, parse_qs, urlunparse
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from dotenv import load_dotenv
 
-load_dotenv()
+from backend.core.config import settings
 
-# We expect a postgresql+asyncpg URL or postgres:// which needs to be replaced
-DATABASE_URL = os.environ.get("DATABASE_URL", "")
-DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://").replace("postgresql://", "postgresql+asyncpg://")
+_raw_url = settings.DATABASE_URL
+if not _raw_url:
+    raise ValueError("DATABASE_URL is not set in the environment / .env file.")
 
-# If Neon DB pooler is used, we need sslmode=require in the string for some drivers, 
-# but asyncpg requires ssl parameters passed to connect_args, or handled via asyncpg native DSN parsing.
-# SQLAlchemy's asyncpg dialect natively handles SSL through connection arguments or string properly if formatted well.
+# Normalise scheme to postgresql+asyncpg
+_url = (
+    _raw_url
+    .replace("postgres://", "postgresql+asyncpg://")
+    .replace("postgresql://", "postgresql+asyncpg://")
+)
+
+# asyncpg rejects 'sslmode' as a query parameter (that is a libpq/psycopg2 concept).
+# Strip it here — SSL is enforced via the SSLContext in connect_args instead.
+_parsed = urlparse(_url)
+_qs = {k: v for k, v in parse_qs(_parsed.query).items() if k != "sslmode"}
+DATABASE_URL = urlunparse(_parsed._replace(query=urlencode(_qs, doseq=True)))
+
+# asyncpg requires an ssl.SSLContext — NOT the string "require"
+_ssl_ctx = ssl.create_default_context()
+_ssl_ctx.check_hostname = False
+_ssl_ctx.verify_mode = ssl.CERT_NONE
 
 engine = create_async_engine(
     DATABASE_URL,
     echo=False,
     pool_pre_ping=True,
-    # connect_args={"ssl": "require"} # Uncomment if ssl issues occur with asyncpg
+    connect_args={"ssl": _ssl_ctx},
 )
 
 AsyncSessionLocal = async_sessionmaker(
-    engine, 
-    class_=AsyncSession, 
+    engine,
+    class_=AsyncSession,
     expire_on_commit=False,
     autocommit=False,
-    autoflush=False
+    autoflush=False,
 )
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         try:
             yield session
+        except Exception:
+            await session.rollback()
+            raise
         finally:
             await session.close()

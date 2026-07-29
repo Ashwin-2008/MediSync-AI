@@ -1,4 +1,5 @@
 import uuid
+import math
 from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,7 +19,8 @@ async def read_doctors(
 ) -> Any:
     """Retrieve doctors."""
     doctors, total = await crud_doctor.get_multi_with_count(db, skip=pagination["skip"], limit=pagination["limit"])
-    return {"items": doctors, "total": total, "page": pagination["skip"] // pagination["limit"] + 1, "size": pagination["limit"]}
+    pages = math.ceil(total / pagination["limit"]) if pagination["limit"] > 0 else 0
+    return {"items": doctors, "total": total, "page": pagination["skip"] // pagination["limit"] + 1, "size": pagination["limit"], "pages": pages}
 
 @router.post("/", response_model=DoctorResponse)
 async def create_doctor(

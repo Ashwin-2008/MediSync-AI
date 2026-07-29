@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate } from 'react-router-dom';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
@@ -10,8 +11,9 @@ import { AuthService } from '../../services/api';
 
 const registerSchema = z.object({
   email: z.string().email("Invalid email address"),
-  password: z.string().min(4, "Password must be at least 4 characters"),
-  full_name: z.string().min(2, "Full name is required"),
+  password: z.string().min(12, "Password must be at least 12 characters"),
+  first_name: z.string().min(2, "First name is required"),
+  last_name: z.string().min(2, "Last name is required"),
   role: z.enum(['admin', 'doctor', 'nurse', 'receptionist']),
 });
 
@@ -22,13 +24,19 @@ export default function Register() {
   const [success, setSuccess] = useState('');
   const navigate = useNavigate();
   
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<RegisterForm>();
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<RegisterForm>({
+    resolver: zodResolver(registerSchema)
+  });
 
   const onSubmit = async (data: RegisterForm) => {
     setError('');
     setSuccess('');
     try {
-      await AuthService.register(data);
+      const submitData = {
+        ...data,
+        username: data.email
+      };
+      await AuthService.register(submitData);
       setSuccess('Registration successful! Redirecting to login...');
       setTimeout(() => {
         navigate('/login');
@@ -74,14 +82,25 @@ export default function Register() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div className="space-y-2">
-                <Input
-                  {...register('full_name')}
-                  type="text"
-                  placeholder="Full Name"
-                  className={errors.full_name ? "border-destructive" : ""}
-                />
-                {errors.full_name && <p className="text-xs text-destructive">{errors.full_name.message}</p>}
+              <div className="flex gap-2">
+                <div className="space-y-2 flex-1">
+                  <Input
+                    {...register('first_name')}
+                    type="text"
+                    placeholder="First Name"
+                    className={errors.first_name ? "border-destructive" : ""}
+                  />
+                  {errors.first_name && <p className="text-xs text-destructive">{errors.first_name.message}</p>}
+                </div>
+                <div className="space-y-2 flex-1">
+                  <Input
+                    {...register('last_name')}
+                    type="text"
+                    placeholder="Last Name"
+                    className={errors.last_name ? "border-destructive" : ""}
+                  />
+                  {errors.last_name && <p className="text-xs text-destructive">{errors.last_name.message}</p>}
+                </div>
               </div>
 
               <div className="space-y-2">

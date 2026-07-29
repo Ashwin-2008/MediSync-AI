@@ -1,6 +1,6 @@
 from typing import List, Optional
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import String, ForeignKey, Float, DateTime, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID, JSONB
@@ -22,7 +22,7 @@ class Payment(AbstractBaseModel):
     invoice_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("invoices.id", ondelete="CASCADE"))
     amount: Mapped[float] = mapped_column(Float)
     payment_method: Mapped[str] = mapped_column(String(50)) # CASH, CREDIT, INSURANCE
-    payment_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    payment_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     transaction_id: Mapped[Optional[str]] = mapped_column(String(100))
     
     invoice: Mapped["Invoice"] = relationship(back_populates="payments")
@@ -34,6 +34,6 @@ class InsuranceClaim(AbstractBaseModel):
     claim_amount: Mapped[float] = mapped_column(Float)
     approved_amount: Mapped[Optional[float]] = mapped_column(Float)
     status: Mapped[str] = mapped_column(String(50), default="SUBMITTED") # SUBMITTED, APPROVED, DENIED
-    submission_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    submission_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     
     invoice: Mapped["Invoice"] = relationship(back_populates="claims")

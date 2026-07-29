@@ -24,7 +24,7 @@ class ConnectionManager:
     async def broadcast(self, message: Dict):
         """Broadcasts live workflow events (Confidence, Status, Tools) to frontend."""
         msg_str = json.dumps(message)
-        for connection in self.active_connections:
+        for connection in list(self.active_connections):
             try:
                 await connection.send_text(msg_str)
             except Exception as e:

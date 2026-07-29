@@ -1,6 +1,6 @@
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 
 try:
@@ -17,7 +17,7 @@ Base = declarative_base() if declarative_base else object
 class AuditLog(Base):
     __tablename__ = 'audit_logs'
     id = Column(Integer, primary_key=True, autoincrement=True) if Column else None
-    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True) if Column else None
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True) if Column else None
     user_id = Column(String(255), nullable=True) if Column else None
     agent = Column(String(100), nullable=False) if Column else None
     action_type = Column(String(100), nullable=False) if Column else None

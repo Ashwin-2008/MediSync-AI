@@ -69,10 +69,12 @@ def get_random_lab_test():
 
 async def bulk_insert(db_session, model, data_list, batch_size=5000):
     """
-    Efficient bulk insert using SQLAlchemy Core
+    Efficient bulk insert using SQLAlchemy Core with ON CONFLICT DO NOTHING
+    so re-running the seeder never crashes on duplicate keys.
     """
-    from sqlalchemy import insert
+    from sqlalchemy.dialects.postgresql import insert
     for i in range(0, len(data_list), batch_size):
         batch = data_list[i:i+batch_size]
-        await db_session.execute(insert(model).values(batch))
+        stmt = insert(model).values(batch).on_conflict_do_nothing()
+        await db_session.execute(stmt)
     await db_session.commit()

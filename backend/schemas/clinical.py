@@ -1,6 +1,6 @@
 import uuid
 from typing import List, Optional
-from datetime import datetime, date, time
+from datetime import datetime, timezone, date, time
 from pydantic import Field
 from .base import BaseSchema, UUIDSchema, PaginationSchema
 
@@ -63,7 +63,7 @@ class VitalSignBase(BaseSchema):
     heart_rate: Optional[int] = None
     respiratory_rate: Optional[int] = None
     oxygen_saturation: Optional[float] = None
-    recorded_at: datetime = Field(default_factory=datetime.utcnow)
+    recorded_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class VitalSignCreate(VitalSignBase):
     patient_id: uuid.UUID

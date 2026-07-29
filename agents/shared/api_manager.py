@@ -1,84 +1,110 @@
 import time
 import logging
-from enum import Enum
-from typing import List, Dict, Optional
 import os
+from enum import Enum
+from pathlib import Path
+from typing import List, Dict, Optional
+from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
 
+_ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
+
+
 class Provider(Enum):
     GEMINI = "gemini"
-    GROQ = "groq"
+    GROQ   = "groq"   # used for OpenRouter
+
 
 class APIKey:
-    def __init__(self, key: str, provider: Provider, priority: int = 0):
-        self.key = key
-        self.provider = provider
-        self.priority = priority
-        self.usage_count = 0
+    def __init__(self, key: str, provider: Provider):
+        self.key            = key
+        self.provider       = provider
+        self.usage_count    = 0
         self.cooldown_until = 0.0
 
     @property
     def is_in_cooldown(self) -> bool:
         return time.time() < self.cooldown_until
 
-    def add_cooldown(self, seconds: int = 300):
+    def add_cooldown(self, seconds: int):
         self.cooldown_until = time.time() + seconds
-        logger.warning(f"Key for {self.provider.value} put in cooldown for {seconds}s")
+        logger.warning("[APIManager] key=***%s provider=%s cooldown=%ds",
+                       self.key[-4:], self.provider.value, seconds)
+
 
 class APIManager:
     def __init__(self):
         self.keys: Dict[Provider, List[APIKey]] = {
             Provider.GEMINI: [],
-            Provider.GROQ: []
+            Provider.GROQ:   [],
         }
-        self.load_keys()
+        self._loaded = False
 
-    def load_keys(self):
-        # Load up to 4 keys per provider from environment variables
-        from dotenv import load_dotenv
-        load_dotenv()
+    def _load(self):
+        """Load (or reload) keys from .env. Safe to call multiple times."""
+        load_dotenv(_ENV_FILE, override=True)
+
+        # Preserve existing cooldown state by key string
+        existing: Dict[str, APIKey] = {}
+        for key_list in self.keys.values():
+            for k in key_list:
+                existing[k.key] = k
+
+        self.keys = {Provider.GEMINI: [], Provider.GROQ: []}
+
         for i in range(1, 5):
-            gemini_key = os.getenv(f"GEMINI_KEY_{i}")
-            if gemini_key and gemini_key.strip():
-                self.keys[Provider.GEMINI].append(APIKey(gemini_key, Provider.GEMINI))
-            
-        or_key = os.getenv("OPENROUTER_KEY")
-        if or_key and or_key.strip():
-            self.keys[Provider.GROQ].append(APIKey(or_key, Provider.GROQ))
+            raw = os.getenv(f"GEMINI_KEY_{i}", "").strip()
+            if raw:
+                obj = existing.get(raw) or APIKey(raw, Provider.GEMINI)
+                self.keys[Provider.GEMINI].append(obj)
 
-    def _get_best_key(self, provider: Provider) -> Optional[APIKey]:
-        available_keys = [k for k in self.keys[provider] if not k.is_in_cooldown]
-        if not available_keys:
-            return None
+        raw_or = os.getenv("OPENROUTER_KEY", "").strip()
+        if raw_or:
+            obj = existing.get(raw_or) or APIKey(raw_or, Provider.GROQ)
+            self.keys[Provider.GROQ].append(obj)
 
-        # Sort by: 1. Priority (desc), 2. Usage Count (asc)
-        available_keys.sort(key=lambda k: (-k.priority, k.usage_count))
-        
-        best_key = available_keys[0]
-        best_key.usage_count += 1
-        return best_key
+        logger.info(
+            "[APIManager] loaded %d Gemini key(s), %d OpenRouter key(s)",
+            len(self.keys[Provider.GEMINI]),
+            len(self.keys[Provider.GROQ]),
+        )
+        self._loaded = True
+
+    def reload(self):
+        """Force re-read of .env — call after updating keys without restarting."""
+        self._load()
 
     def get_key(self, provider: Provider) -> Optional[str]:
-        """Gets the best available key for the provider."""
-        key_obj = self._get_best_key(provider)
-        
-        if key_obj:
-            return key_obj.key
-            
-        logger.warning(f"All keys for {provider.value} are exhausted or in cooldown.")
-        return None
+        if not self._loaded:
+            self._load()
+
+        available = [k for k in self.keys[provider] if not k.is_in_cooldown]
+        if not available:
+            # Try reloading in case new keys were added to .env
+            self._load()
+            available = [k for k in self.keys[provider] if not k.is_in_cooldown]
+
+        if not available:
+            logger.warning("[APIManager] No available keys for provider=%s", provider.value)
+            return None
+
+        available.sort(key=lambda k: k.usage_count)
+        best = available[0]
+        best.usage_count += 1
+        return best.key
 
     def report_error(self, key_str: str, status_code: int):
-        """Reports an error for a key. Puts in cooldown on 429."""
-        for provider_keys in self.keys.values():
-            for k in provider_keys:
+        for key_list in self.keys.values():
+            for k in key_list:
                 if k.key == key_str:
                     if status_code == 429:
-                        k.add_cooldown(300) # 5 minutes cooldown
-                    elif status_code in [408, 500, 502, 503, 504]:
-                        k.add_cooldown(60) # 1 minute cooldown for temporary network issues
+                        # Daily quota exhaustion — cool down for 1 hour
+                        # (per-minute quota resets in 60s, daily resets at midnight)
+                        k.add_cooldown(3600)
+                    elif status_code in (408, 500, 502, 503, 504):
+                        k.add_cooldown(60)
                     return
 
-# Global singleton
+
 api_manager = APIManager()

@@ -2,7 +2,10 @@ import axios from 'axios';
 
 // Create base instance for REST API calls
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1',
+  // In development the Vite proxy forwards /api/* → http://localhost:8000/api/*
+  // so requests are same-origin and CORS never applies.
+  // In production set VITE_API_BASE_URL to the real backend URL.
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -21,10 +24,15 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-      // Clear token and redirect to login if unauthorized
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      // Never redirect if we are already on the login page — this prevents
+      // the interceptor from tearing down an in-flight login sequence and
+      // causing a spurious "Network Error" on the original request.
+      const isAuthRoute = window.location.pathname === '/login' || window.location.pathname === '/register';
+      if (!isAuthRoute) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

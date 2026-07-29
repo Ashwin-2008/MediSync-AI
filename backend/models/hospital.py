@@ -1,6 +1,6 @@
 from typing import List, Optional
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import String, ForeignKey, Integer, Boolean, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID, JSONB
@@ -53,7 +53,7 @@ class Admission(AbstractBaseModel):
     __tablename__ = "admissions"
     patient_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("patients.id"))
     bed_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("beds.id"))
-    admission_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    admission_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     reason: Mapped[str] = mapped_column(String(500))
     status: Mapped[str] = mapped_column(String(50), default="ADMITTED") # ADMITTED, DISCHARGED
     
@@ -63,7 +63,7 @@ class Admission(AbstractBaseModel):
 class Discharge(AbstractBaseModel):
     __tablename__ = "discharges"
     admission_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("admissions.id", ondelete="CASCADE"), unique=True)
-    discharge_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    discharge_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     summary: Mapped[str] = mapped_column(String)
     instructions: Mapped[Optional[str]] = mapped_column(String)
     

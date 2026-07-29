@@ -1,6 +1,6 @@
 from typing import List, Optional
 import uuid
-from datetime import datetime, date, time
+from datetime import datetime, timezone, date, time
 from sqlalchemy import String, ForeignKey, Float, DateTime, Date, Time, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID, JSONB
@@ -50,7 +50,7 @@ class VitalSign(AbstractBaseModel):
     __tablename__ = "vital_signs"
     patient_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("patients.id"))
     appointment_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("appointments.id"))
-    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     temperature: Mapped[Optional[float]] = mapped_column(Float) # Celsius
     blood_pressure_systolic: Mapped[Optional[int]] = mapped_column()
     blood_pressure_diastolic: Mapped[Optional[int]] = mapped_column()

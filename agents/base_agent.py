@@ -95,8 +95,10 @@ class BaseAgent(ABC):
         try:
             from backend.crud import agent_execution, workflow_instance
             from backend.schemas.workflow import AgentExecutionCreate
-            import uuid
-            
+
+            # Rollback any failed transaction from a prior step before writing
+            await db.rollback()
+
             workflow_id_str = context_data.get("workflow_id")
             if workflow_id_str:
                 wi = await workflow_instance.get_by_session(db, session_id=workflow_id_str)

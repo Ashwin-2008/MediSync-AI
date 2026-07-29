@@ -1,6 +1,6 @@
 from typing import List, Optional
 import uuid
-from datetime import datetime, date
+from datetime import datetime, timezone, date
 from sqlalchemy import String, ForeignKey, Date, DateTime, Text, Float
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID, JSONB
@@ -70,7 +70,7 @@ class LabOrder(AbstractBaseModel):
     test_name: Mapped[str] = mapped_column(String(200))
     priority: Mapped[str] = mapped_column(String(50)) # ROUTINE, URGENT, STAT
     status: Mapped[str] = mapped_column(String(50), default="PENDING")
-    order_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    order_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     
     reports: Mapped[List["LabReport"]] = relationship(back_populates="order")
 
@@ -78,7 +78,7 @@ class LabReport(AbstractBaseModel):
     __tablename__ = "lab_reports"
     order_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("lab_orders.id", ondelete="CASCADE"))
     technician_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
-    report_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    report_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     summary: Mapped[str] = mapped_column(Text)
     
     order: Mapped["LabOrder"] = relationship(back_populates="reports")
@@ -102,11 +102,11 @@ class RadiologyReport(AbstractBaseModel):
     scan_type: Mapped[str] = mapped_column(String(100)) # X-RAY, MRI, CT
     report_text: Mapped[str] = mapped_column(Text)
     image_urls: Mapped[Optional[dict]] = mapped_column(JSONB)
-    date_performed: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    date_performed: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 class MedicalDocument(AbstractBaseModel):
     __tablename__ = "medical_documents"
     patient_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("patients.id"))
     document_type: Mapped[str] = mapped_column(String(100)) # CONSENT, PREVIOUS_RECORDS
     file_url: Mapped[str] = mapped_column(String(500))
-    uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

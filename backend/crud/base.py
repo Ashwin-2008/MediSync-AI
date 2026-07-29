@@ -31,6 +31,24 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         result = await db.execute(query)
         return list(result.scalars().all())
 
+    async def get_multi_with_count(
+        self, db: AsyncSession, *, skip: int = 0, limit: int = 100, sort_by: Optional[str] = None, descending: bool = False
+    ) -> tuple[List[ModelType], int]:
+        # Count query
+        count_query = select(func.count()).select_from(self.model)
+        count_result = await db.execute(count_query)
+        total = count_result.scalar_one() or 0
+
+        # Paginated query
+        query = select(self.model)
+        if sort_by and hasattr(self.model, sort_by):
+            order_col = getattr(self.model, sort_by)
+            query = query.order_by(desc(order_col) if descending else asc(order_col))
+        query = query.offset(skip).limit(limit)
+        result = await db.execute(query)
+        items = list(result.scalars().all())
+        return items, total
+
     async def create(self, db: AsyncSession, *, obj_in: CreateSchemaType) -> ModelType:
         obj_in_data = jsonable_encoder(obj_in)
         db_obj = self.model(**obj_in_data)  # type: ignore

@@ -1,4 +1,5 @@
 import uuid
+from sqlalchemy import select
 from backend.seed_utils import fake, generate_uuid, bulk_insert, DEPARTMENTS, MEDICINES
 from backend.models.auth import Role, User
 from backend.models.hospital import Hospital, Department, Room, Bed
@@ -9,7 +10,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 async def seed_auth_hospital(db, config, batch_size):
     context = {}
-    
+
     # 1. Hospital
     hospitals = [{
         "id": generate_uuid(),
@@ -21,56 +22,45 @@ async def seed_auth_hospital(db, config, batch_size):
     await bulk_insert(db, Hospital, hospitals, batch_size)
     hospital_id = hospitals[0]["id"]
     context["hospital_id"] = hospital_id
-    
-    # 2. Roles
-    roles = [
-        {"id": generate_uuid(), "name": "Admin"},
-        {"id": generate_uuid(), "name": "Doctor"},
-        {"id": generate_uuid(), "name": "Nurse"},
-        {"id": generate_uuid(), "name": "Patient"},
-        {"id": generate_uuid(), "name": "Receptionist"}
-    ]
-    await bulk_insert(db, Role, roles, batch_size)
-    context["roles"] = {r["name"]: r["id"] for r in roles}
-    
-    # 3. Users (Admins and Receptionists)
+
+    # 2. Roles — insert with ON CONFLICT DO NOTHING, then read actual IDs from DB
+    role_names = ["Admin", "Doctor", "Nurse", "Patient", "Receptionist"]
+    roles_to_insert = [{"id": generate_uuid(), "name": n} for n in role_names]
+    await bulk_insert(db, Role, roles_to_insert, batch_size)
+
+    # Always read back from DB so we use the real UUIDs (handles re-runs)
+    result = await db.execute(select(Role).where(Role.name.in_(role_names)))
+    db_roles = result.scalars().all()
+    context["roles"] = {r.name: r.id for r in db_roles}
+
+    # 3. Users
     hashed_password = pwd_context.hash("password123")
     users = []
-    
-    # Admins
+
     for i in range(config["admins"]):
-        email = "admin@hospital.com" if i == 0 else fake.email()
-        username = "admin" if i == 0 else fake.user_name()
-        first_name = "Admin" if i == 0 else fake.first_name()
-        last_name = "User" if i == 0 else fake.last_name()
         users.append({
             "id": generate_uuid(),
-            "email": email,
-            "username": username,
+            "email": "admin@hospital.com" if i == 0 else fake.email(),
+            "username": "admin" if i == 0 else fake.user_name(),
             "hashed_password": hashed_password,
-            "first_name": first_name,
-            "last_name": last_name,
-            "role_id": context["roles"]["Admin"]
+            "first_name": "Admin" if i == 0 else fake.first_name(),
+            "last_name": "User" if i == 0 else fake.last_name(),
+            "role_id": context["roles"]["Admin"],
         })
-        
-    # Receptionists
+
     for i in range(config["receptionists"]):
-        email = "receptionist@hospital.com" if i == 0 else fake.email()
-        username = "receptionist" if i == 0 else fake.user_name()
-        first_name = "Receptionist" if i == 0 else fake.first_name()
-        last_name = "User" if i == 0 else fake.last_name()
         users.append({
             "id": generate_uuid(),
-            "email": email,
-            "username": username,
+            "email": "receptionist@hospital.com" if i == 0 else fake.email(),
+            "username": "receptionist" if i == 0 else fake.user_name(),
             "hashed_password": hashed_password,
-            "first_name": first_name,
-            "last_name": last_name,
-            "role_id": context["roles"]["Receptionist"]
+            "first_name": "Receptionist" if i == 0 else fake.first_name(),
+            "last_name": "User" if i == 0 else fake.last_name(),
+            "role_id": context["roles"]["Receptionist"],
         })
-        
+
     await bulk_insert(db, User, users, batch_size)
-    
+
     # 4. Departments
     dept_data = []
     for d_name in DEPARTMENTS[:config["departments"]]:
@@ -82,12 +72,11 @@ async def seed_auth_hospital(db, config, batch_size):
         })
     await bulk_insert(db, Department, dept_data, batch_size)
     context["departments"] = [d["id"] for d in dept_data]
-    
+
     # 5. Rooms & Beds
-    rooms = []
-    beds = []
+    rooms, beds = [], []
     for dept_id in context["departments"]:
-        for i in range(10): # 10 rooms per department
+        for i in range(10):
             room_id = generate_uuid()
             rooms.append({
                 "id": room_id,
@@ -96,7 +85,7 @@ async def seed_auth_hospital(db, config, batch_size):
                 "room_type": fake.random_element(["ICU", "General", "Private", "Operation Theater"]),
                 "capacity": 4
             })
-            for b in range(4): # 4 beds per room
+            for b in range(4):
                 beds.append({
                     "id": generate_uuid(),
                     "room_id": room_id,
@@ -106,7 +95,7 @@ async def seed_auth_hospital(db, config, batch_size):
     await bulk_insert(db, Room, rooms, batch_size)
     await bulk_insert(db, Bed, beds, batch_size)
     context["beds"] = [b["id"] for b in beds]
-    
+
     # 6. Medicines
     meds = []
     for i in range(config["medicines"]):
@@ -121,5 +110,5 @@ async def seed_auth_hospital(db, config, batch_size):
         })
     await bulk_insert(db, Medicine, meds, batch_size)
     context["medicines"] = [m["id"] for m in meds]
-    
+
     return context
